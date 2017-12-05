@@ -1,3 +1,0 @@
-{
-  "iperf-server-client/tests/functional/test_experiment_perform.py::PerformIPerfServerClientExperimentTest::test_perform_iperf_server_client_experiment": true
-}

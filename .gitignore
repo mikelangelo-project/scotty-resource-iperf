@@ -1,0 +1,12 @@
+*.pyc
+/log/*.log
+*.swp
+
+# Unit test / coverage reports
+.coverage
+.coverage.*
+
+.cache/
+
+# tests
+tmp
