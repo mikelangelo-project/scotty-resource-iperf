@@ -1,0 +1,25 @@
+heat_template_version: 2015-10-15
+
+parameters:
+  image:
+    type: string
+    description: image for iperf server and client
+    default: 4beaa052-8e21-4264-9ed9-2dfa41fd254f 
+
+  flavor:
+    type: string
+    description: flavor for iperf server and client
+    default: kvm.m1.small
+
+resources:
+  iperf-server:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+
+  iperf-client:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: image }
+      flavor: { get_param: flavor }      
