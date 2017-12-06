@@ -8,7 +8,7 @@ from scotty import cli
 
 
 class PerformIPerfServerClientExperimentTest(unittest.TestCase):
-    cmd = 'scotty experiment perform -c samples/experiment.yaml'
+    cmd = 'scotty experiment perform -c examples/experiment.yaml'
     script_dir = os.path.dirname(__file__)
     experiment_path = os.path.join(script_dir, '../../..')
     
