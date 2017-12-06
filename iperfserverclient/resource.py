@@ -5,6 +5,7 @@ from time import sleep
 import keystoneauth1.loading
 import keystoneauth1.session
 import heatclient.client
+import novaclient.client
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class IPerfResource(object):
         )
         keystone_session = keystoneauth1.session.Session(auth=auth)
         self._heat = heatclient.client.Client('1', session=keystone_session)
+        self._nova = novaclient.client.Client('2', session=keystone_session)
         self.endpoint = {}
 
     def deploy(self, context):
@@ -38,7 +40,12 @@ class IPerfResource(object):
         template_content = self._load_template_content()
         args = {
            'stack_name':self.heat_stack_name,
-           'template':template_content
+           'template':template_content,
+           'parameters': {
+             'public_net_id': 'public',
+             'private_net_id': 'private-1a03e53738ad4854b9610273945c2b6b',
+             'private_subnet_id': '30e4947e-6479-419c-8f85-a20c993bb939',
+           },
         }
         return args
 
@@ -61,6 +68,8 @@ class IPerfResource(object):
         return template_content
 
     def clean(self, context):
+        logger.warning('Skip clean resources for iperf-server-client')
+        return
         self._heat.stacks.delete(self.heat_stack_name)
         self._wait_for_stack_deleted()
 

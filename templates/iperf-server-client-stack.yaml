@@ -1,25 +1,61 @@
 heat_template_version: 2015-10-15
 
+description: >
+  HOT Tenplate to deploy two servers (iperf-server and iperf-client) into existing neutron tenant network and assign floating IP 
+  addresse to the iperf-server so he is routable from the public network
+
 parameters:
   image:
     type: string
     description: image for iperf server and client
     default: 4beaa052-8e21-4264-9ed9-2dfa41fd254f 
-
   flavor:
     type: string
     description: flavor for iperf server and client
     default: kvm.m1.small
+  public_net_id:
+    type: string
+    description: ID of public network for which floating IP addresses will be allocated
+  private_net_id:
+    type: string
+    description: ID of private network into which servers get deployed
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
 
 resources:
-  iperf-server:
-    type: OS::Nova::Server
-    properties:
-      image: { get_param: image }
-      flavor: { get_param: flavor }
-
   iperf-client:
     type: OS::Nova::Server
     properties:
+      name: iperf-client
       image: { get_param: image }
-      flavor: { get_param: flavor }      
+      flavor: { get_param: flavor }
+      key_name: msrba
+      networks:
+        - port: { get_resource: iperf-client_port }
+
+  iperf-client_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  iperf-client_floating_ip:
+    type: OS::Neutron::FloatingIP
+    properties:
+      floating_network_id: { get_param: public_net_id }
+      port_id: { get_resource: iperf-client_port }
+
+  iperf-server:
+    type: OS::Nova::Server
+    properties:
+      name: iperf-server
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: msrba
+
+outputs:
+  iperf-client_public_ip:
+    description: Floating IP of iperf-client in public network
+    value: { get_attr: [ iperf-client_floating_ip, floating_ip_address ] }
