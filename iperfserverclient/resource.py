@@ -6,6 +6,7 @@ import keystoneauth1.loading
 import keystoneauth1.session
 import heatclient.client
 import novaclient.client
+from heatclient.common import template_utils
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +26,13 @@ class IPerfResource(object):
         self._heat = heatclient.client.Client('1', session=keystone_session)
         self._nova = novaclient.client.Client('2', session=keystone_session)
         self.endpoint = {}
+        self.template_path = self.get_template_path()
+
+    def get_template_path(self):
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+        template_path = os.path.join(script_dir, '../templates/iperf-server-client-stack.yaml')
+        template_path = os.path.normpath(template_path)
+        return template_path
 
     def deploy(self, context):
         heat_stack_args = self._create_heat_stack_args()
@@ -37,10 +45,11 @@ class IPerfResource(object):
         }
 
     def _create_heat_stack_args(self):
-        template_content = self._load_template_content()
+        tpl_files, template = template_utils.get_template_contents(self.template_path)
         args = {
            'stack_name':self.heat_stack_name,
-           'template':template_content,
+           'template':template,
+           'files': tpl_files,
            'parameters': {
              'public_net_id': 'public',
              'private_net_id': 'private-1a03e53738ad4854b9610273945c2b6b',
@@ -58,14 +67,6 @@ class IPerfResource(object):
                return
            if status == 'CREATE_FAILED':
                raise Exception('Stack create failed')
-
-    def _load_template_content(self):
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        template_path = os.path.join(script_dir, '../templates/iperf-server-client-stack.yaml')
-        template_path = os.path.normpath(template_path)
-        with open(template_path, 'r') as template_file:
-            template_content = template_file.read()
-        return template_content
 
     def clean(self, context):
         logger.warning('Skip clean resources for iperf-server-client')

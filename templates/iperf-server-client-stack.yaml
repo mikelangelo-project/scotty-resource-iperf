@@ -22,8 +22,51 @@ parameters:
   private_subnet_id:
     type: string
     description: ID of private sub network into which servers get deployed
+  timeout:
+    type: number
+    description: Timeout for WaitCondition
+    default: 600
 
 resources:
+  iperf-client_wait_condition:
+    type: OS::Heat::WaitCondition
+    properties:
+      handle: { get_resource: iperf-client_wait_handle }
+      timeout: { get_param: timeout }
+
+  iperf-client_wait_handle:
+    type: OS::Heat::WaitConditionHandle
+
+  iperf-client_signal:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/iperf-client_signal.sh }
+
+  iperf-client_write_heat_params:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: fragments/write-heat-params.yaml }
+          params:
+            "$WC_NOTIFY": { get_attr: ['iperf-client_wait_handle', 'curl_cli'] }
+
+  iperf-client_configure:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/iperf-client_configure.sh }
+
+  iperf-client_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: { get_resource: iperf-client_write_heat_params } 
+        - config: { get_resource: iperf-client_configure }
+        - config: { get_resource: iperf-client_signal }
+
   iperf-client:
     type: OS::Nova::Server
     properties:
@@ -31,6 +74,8 @@ resources:
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: msrba
+      user_data_format: RAW
+      user_data: { get_resource: iperf-client_init}
       networks:
         - port: { get_resource: iperf-client_port }
 
