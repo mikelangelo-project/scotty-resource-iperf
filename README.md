@@ -6,7 +6,7 @@ Directory structure
 
 | Path              | Description |
 | ----------------- | ----------- |
-| ./samples         | Includes samples like experiment.yaml |
+| ./examples        | Includes samples like experiment.yaml |
 | ./resource_gen.py | Entry module if scotty runs a experiment with this resource |
 
 Getting Started
@@ -17,17 +17,12 @@ Three interfaces must be implemented from resource_gen.py
 
 | Method            | Description |
 | ----------------- | ----------- |
-| endpoint(context) | Is called from scotty until endpoint gives an result != nil <br> Check the state of your resource here and return nil if the workload has no endpoint yet otherwise return dict with the endpoint data |
 | deploy(context)   | Is called from scotty if the resource will be deployed. Please implement this methode as a non blocking methode and collect the state and endpoint in the endpoint methode |
 | clean(context)    | Is called from scotty if the resource will be cleaned |
 
-You can test your resource implementation by starting the sample experiment under ./samples/experiment.yaml.
+You can test your resource implementation by starting the sample experiment under ./examples/experiment.yaml.
 
-    scotty experiment perform -c ./samples/experiment.yaml
-
-After this run you find your scotty data under the directory ./.scotty. You can clean it by calling:
-
-    scotty experiment clean
+    scotty experiment perform -c ./examples/experiment.yaml
 
 Experiment Yaml
 ---------------
@@ -37,14 +32,14 @@ A resource generator can only be executed by an experiment. An experiment is def
 experiment.yaml:
 
     description: my experiment with my resource
-    tags:
-      - my_tag
     resources:
-      - name: my_resource_def
+      - name: iperf-server-client
         generator: file:.
         params:
-          user: myuser
-          passwd: <%= ENV['mysecret'] %>
+          username: <%= ENV['OS_USERNAME'] %>
+          password: <%= ENV['OS_PASSWORD'] %>
+          auth_url: <%= ENV['OS_AUTH_URL'] %>
+          project_name: <%= ENV['OS_PROJECT_NAME'] %>
 
 You can define a description and a list of tags for the experiment. Inside the section resources you can define a list of resources for the experiment. The name is in your choice but must be unique. For the generator you can use two types of repositories (git and file). In case of file you must write file:<relative path to the exoeriment workspace> (experiment workspace: where you run 'scotty experiment perform'). In case of git you must write git:<public git repository. Samples:
 
@@ -62,11 +57,11 @@ experiment.yaml section resources
 
     ...
     params:
-      greeting: Hallo
+      username: myuser
     ...
     
 Implementation in the resource module
 
     def deploy(context):
       resource = context.v1.resource
-      greeting = resource.params['greeting']
+      greeting = resource.params['username']
