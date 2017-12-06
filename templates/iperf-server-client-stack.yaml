@@ -75,7 +75,7 @@ resources:
       flavor: { get_param: flavor }
       key_name: msrba
       user_data_format: RAW
-      user_data: { get_resource: iperf-client_init}
+      user_data: { get_resource: iperf-client_init }
       networks:
         - port: { get_resource: iperf-client_port }
 
@@ -92,6 +92,45 @@ resources:
       floating_network_id: { get_param: public_net_id }
       port_id: { get_resource: iperf-client_port }
 
+  iperf-server_wait_condition:
+    type: OS::Heat::WaitCondition
+    properties:
+      handle: { get_resource: iperf-server_wait_handle }
+      timeout: { get_param: timeout }
+
+  iperf-server_wait_handle:
+    type: OS::Heat::WaitConditionHandle
+
+  iperf-server_signal:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/iperf-server_signal.sh }
+
+  iperf-server_write_heat_params:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: fragments/write-heat-params.yaml }
+          params:
+            "$WC_NOTIFY": { get_attr: ['iperf-server_wait_handle', 'curl_cli'] }
+
+  iperf-server_configure:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/iperf-server_configure.sh }
+
+  iperf-server_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: { get_resource: iperf-server_write_heat_params }
+        - config: { get_resource: iperf-server_configure }
+        - config: { get_resource: iperf-server_signal }
+
   iperf-server:
     type: OS::Nova::Server
     properties:
@@ -99,6 +138,8 @@ resources:
       image: { get_param: image }
       flavor: { get_param: flavor }
       key_name: msrba
+      user_data_format: RAW
+      user_data: { get_resource: iperf-server_init }
 
 outputs:
   iperf-client_public_ip:
