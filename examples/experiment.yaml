@@ -1,6 +1,6 @@
 description: resource to deploy iperf vms over heat
 resources:
-  - name: iperf-server-client resource
+  - name: iperf_server_client
     generator: file:.
     params:
       username: <%= ENV['OS_USERNAME'] %> 

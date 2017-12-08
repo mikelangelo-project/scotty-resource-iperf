@@ -12,10 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class IPerfResource(object):
-    heat_stack_name = 'iperf-server-client'
     def __init__(self, context):
         self.reduce_logging()
         resource = context.v1.resource
+        self.heat_stack_name = resource.name
         keystone_password_loader = keystoneauth1.loading.get_plugin_loader('password')
         auth = keystone_password_loader.load_from_options(
             auth_url = resource.params['auth_url'],
@@ -46,6 +46,12 @@ class IPerfResource(object):
         return template_path
 
     def deploy(self, context):
+        # During Development delete old stack
+        try:
+            self._delete_stack()
+        except:
+            pass
+        logger.info('Start to create stack ({})'.format(self.heat_stack_name))
         heat_stack_args = self._create_heat_stack_args()
         self._heat.stacks.create(**heat_stack_args)
         stack = self._wait_for_stack_complete()
@@ -99,10 +105,14 @@ class IPerfResource(object):
     def clean(self, context):
         logger.warning('Skip clean resources for iperf-server-client')
         return
+        self._delete_stack()
+
+    def _delete_stack(self):
         self._heat.stacks.delete(self.heat_stack_name)
         self._wait_for_stack_deleted()
 
     def _wait_for_stack_deleted(self):
+        logger.info("wait for stack ({}) delete".format(self.heat_stack_name))
         while True:
             sleep(5)
             try:
