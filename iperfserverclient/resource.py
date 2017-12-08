@@ -19,6 +19,7 @@ class IPerfResource(object):
         resource = context.v1.resource
         self.heat_stack_name = resource.name
         keystone_password_loader = keystoneauth1.loading.get_plugin_loader('password')
+        logger.debug("Resource params: {}".format(resource.params))
         auth = keystone_password_loader.load_from_options(
             auth_url = resource.params['auth_url'],
             username = resource.params['username'],
