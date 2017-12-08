@@ -1,4 +1,6 @@
 import logging
+import string
+import random
 import os
 from time import sleep
 
@@ -52,13 +54,19 @@ class IPerfResource(object):
         except:
             pass
         logger.info('Start to create stack ({})'.format(self.heat_stack_name))
-        heat_stack_args = self._create_heat_stack_args()
+        self.create_password()
+        heat_stack_args = self._create_heat_stack_args(self.scotty_password)
         self._heat.stacks.create(**heat_stack_args)
         stack = self._wait_for_stack_complete()
         self.endpoint = self._get_endpoint(stack)
         logger.info('endpoint: {}'.format(self.endpoint))
 
-    def _create_heat_stack_args(self):
+    def create_password(self):
+        chars = string.ascii_uppercase + string.digits
+        size = 8
+        self.scotty_password = ''.join(random.SystemRandom().choice(chars) for _ in range(size))
+
+    def _create_heat_stack_args(self, scotty_password):
         tpl_files, template = template_utils.get_template_contents(self.template_path)
         args = {
            'stack_name':self.heat_stack_name,
@@ -68,6 +76,7 @@ class IPerfResource(object):
              'public_net_id': 'public',
              'private_net_id': 'private-1a03e53738ad4854b9610273945c2b6b',
              'private_subnet_id': '30e4947e-6479-419c-8f85-a20c993bb939',
+             'scotty_password': scotty_password
            },
         }
         return args
@@ -86,13 +95,13 @@ class IPerfResource(object):
         endpoint = {
           'iperf-server': {
             'ip': None,
-            'user': 'cloud',
-            'password': 'secred'
+            'user': 'scotty',
+            'password': self.scotty_password
           },
           'iperf-client': {
             'ip': None,
-            'user': 'cloud',
-            'password': 'secred'
+            'user': 'scotty',
+            'password': self.scotty_password
           }
         }
         for output in stack.to_dict().get('outputs', []):

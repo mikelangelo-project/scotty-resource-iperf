@@ -26,6 +26,10 @@ parameters:
     type: number
     description: Timeout for WaitCondition
     default: 600
+  scotty_password:
+    type: string
+    description: Password for user scotty
+    default: secret
 
 resources:
   iperf-client:
@@ -44,6 +48,7 @@ resources:
           private_subnet_id: { get_param: private_subnet_id }
           private_net_id: { get_param: private_net_id }
           timeout: { get_param: timeout }
+          scotty_password: { get_param: scotty_password }
 
   iperf-server:
     type: "OS::Heat::ResourceGroup"
@@ -58,6 +63,7 @@ resources:
           private_subnet_id: { get_param: private_subnet_id }
           private_net_id: { get_param: private_net_id }
           timeout: { get_param: timeout }
+          scotty_password: { get_param: scotty_password }
 
 outputs:
   iperf-client_public_ip:
