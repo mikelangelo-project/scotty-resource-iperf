@@ -74,6 +74,7 @@ class IPerfResource(object):
            'template':template,
            'files': tpl_files,
            'parameters': {
+             'image': 'f1e57029-92ce-48bd-b7fa-540ed97a94ad',
              'public_net_id': 'public',
              'private_net_id': 'private-1a03e53738ad4854b9610273945c2b6b',
              'private_subnet_id': '30e4947e-6479-419c-8f85-a20c993bb939',
