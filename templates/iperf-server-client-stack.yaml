@@ -34,8 +34,6 @@ parameters:
 resources:
   iperf-client:
     type: "OS::Heat::ResourceGroup"
-    depends_on:
-      - iperf-server
     properties:
       count: 1
       resource_def:
