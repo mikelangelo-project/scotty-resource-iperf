@@ -1,0 +1,109 @@
+heat_template_version: 2015-10-15
+
+description: >
+  This is a nested stack that defines iperf server node. 
+
+parameters:
+  name:
+    type: string
+    description: server name
+  image:
+    type: string
+    description: image for iperf client
+  flavor:
+    type: string
+    description: flavor for iperf server
+  private_net_id:
+    type: string
+    description: ID of public network for which floating IP addresses will be allocated
+  private_subnet_id:
+    type: string
+    description: ID of private sub network into which servers get deployed
+  timeout:
+    type: number
+    description: Timeout for WaitCondition
+    default: 600
+  scotty_password:
+    type: string
+    description: Password for user scotty
+    default: secret
+
+resources:
+  wait_condition:
+    type: OS::Heat::WaitCondition
+    properties:
+      handle: { get_resource: wait_handle }
+      timeout: { get_param: timeout }
+
+  wait_handle:
+    type: OS::Heat::WaitConditionHandle
+
+  signal:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/iperf-server_signal.sh }
+
+  write_heat_params:
+    type: "OS::Heat::SoftwareConfig"
+    properties:
+      group: ungrouped
+      config:
+        str_replace:
+          template: { get_file: fragments/write-heat-params.yaml }
+          params:
+            "$WC_NOTIFY": { get_attr: ['wait_handle', 'curl_cli'] }
+            "$SCOTTY_USER": "scotty"
+            "$SCOTTY_PASSWORD": { get_param: scotty_password }
+
+  wait_for_apt:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/wait_for_apt.sh }
+
+  create_user_scotty:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/create_user_scotty.sh }
+
+  iperf_configure:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: ungrouped
+      config: { get_file: fragments/iperf-server_configure.sh }
+
+  iperf_init:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+        - config: { get_resource: write_heat_params }
+        - config: { get_resource: wait_for_apt }
+        - config: { get_resource: create_user_scotty }
+        - config: { get_resource: iperf_configure }
+        - config: { get_resource: signal }
+
+  iperf_port:
+    type: OS::Neutron::Port
+    properties:
+      network_id: { get_param: private_net_id }
+      fixed_ips:
+        - subnet_id: { get_param: private_subnet_id }
+
+  iperf-server:
+    type: OS::Nova::Server
+    properties:
+      name: { get_param: name }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: msrba
+      user_data_format: RAW
+      user_data: { get_resource: iperf_init }
+      networks:
+        - port: { get_resource: iperf_port }
+
+outputs:
+  iperf-server_private_ip:
+    description: IP of the iperf-server in the private network
+    value: { get_attr: [ iperf_port, fixed_ips, 0, ip_address ] } 

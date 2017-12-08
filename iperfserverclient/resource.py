@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 class IPerfResource(object):
     heat_stack_name = 'iperf-server-client'
     def __init__(self, context):
+        self.reduce_logging()
         resource = context.v1.resource
         keystone_password_loader = keystoneauth1.loading.get_plugin_loader('password')
         auth = keystone_password_loader.load_from_options(
@@ -28,6 +29,16 @@ class IPerfResource(object):
         self.endpoint = {}
         self.template_path = self.get_template_path()
 
+    def reduce_logging(self):
+        reduce_loggers = {
+                'keystoneauth.identity.v2',
+                'keystoneauth.identity.v2.base',
+                'keystoneauth.session',
+                'urllib3.connectionpool',
+                'stevedore.extension'}
+        for logger in reduce_loggers:
+            logging.getLogger(logger).setLevel(logging.WARNING)
+
     def get_template_path(self):
         script_dir = os.path.dirname(os.path.realpath(__file__))
         template_path = os.path.join(script_dir, '../templates/iperf-server-client-stack.yaml')
@@ -37,12 +48,9 @@ class IPerfResource(object):
     def deploy(self, context):
         heat_stack_args = self._create_heat_stack_args()
         self._heat.stacks.create(**heat_stack_args)
-        self._wait_for_stack_complete()
-        self.endpoint = {
-            'url': 'url',
-            'user': 'user',
-            'password': 'password'
-        }
+        stack = self._wait_for_stack_complete()
+        self.endpoint = self._get_endpoint(stack)
+        logger.info('endpoint: {}'.format(self.endpoint))
 
     def _create_heat_stack_args(self):
         tpl_files, template = template_utils.get_template_contents(self.template_path)
@@ -64,9 +72,29 @@ class IPerfResource(object):
            stack = self._heat.stacks.get(self.heat_stack_name)
            status = stack.stack_status
            if status == 'CREATE_COMPLETE':
-               return
+               return stack
            if status == 'CREATE_FAILED':
                raise Exception('Stack create failed')
+
+    def _get_endpoint(self, stack):
+        endpoint = {
+          'iperf-server': {
+            'ip': None,
+            'user': 'cloud',
+            'password': 'secred'
+          },
+          'iperf-client': {
+            'ip': None,
+            'user': 'cloud',
+            'password': 'secred'
+          }
+        }
+        for output in stack.to_dict().get('outputs', []):
+          if output['output_key'] == 'iperf-client_public_ip':
+            endpoint['iperf-client']['ip'] =  output['output_value'][0]
+          elif output['output_key'] == 'iperf-server_private_ip':
+            endpoint['iperf-server']['ip'] =  output['output_value'][0]
+        return endpoint
 
     def clean(self, context):
         logger.warning('Skip clean resources for iperf-server-client')

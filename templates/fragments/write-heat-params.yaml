@@ -6,3 +6,5 @@ write_files:
     permissions: "0600"
     content: |
       WC_NOTIFY="$WC_NOTIFY"
+      SCOTTY_USER="$SCOTTY_USER"
+      SCOTTY_PASSWORD="$SCOTTY_PASSWORD"
