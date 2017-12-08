@@ -112,8 +112,7 @@ class IPerfResource(object):
         return endpoint
 
     def clean(self, context):
-        logger.warning('Skip clean resources for iperf-server-client')
-        return
+        #logger.warning('Skip clean resources for iperf-server-client')
         self._delete_stack()
 
     def _delete_stack(self):
